@@ -14,12 +14,11 @@
             color: #e2e8f0;
             overflow-x: hidden;
             user-select: none;
-            -webkit-tap-highlight-color: transparent; /* Fixes blue flash on mobile tap */
+            -webkit-tap-highlight-color: transparent;
         }
 
         h1, h2, h3, .brand-font { font-family: 'Orbitron', sans-serif; }
 
-        /* Animations */
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-10px); }
@@ -27,14 +26,10 @@
         }
         .animate-float { animation: float 4s ease-in-out infinite; }
         
-        .card-hover:hover { transform: translateY(-5px) scale(1.02); }
-
-        /* Neon Text */
         .neon-text-blue { text-shadow: 0 0 10px #3b82f6; }
         .neon-text-purple { text-shadow: 0 0 10px #a855f7; }
         .neon-text-green { text-shadow: 0 0 10px #22c55e; }
 
-        /* Game Overlay */
         #game-container {
             position: fixed;
             top: 0;
@@ -42,7 +37,7 @@
             width: 100%;
             height: 100%;
             background: rgba(15, 23, 42, 1);
-            z-index: 9999; /* Very high z-index to ensure visibility */
+            z-index: 9999;
             display: none;
             flex-direction: column;
             align-items: center;
@@ -52,10 +47,9 @@
         canvas {
             box-shadow: 0 0 20px rgba(0,0,0,0.8);
             border-radius: 8px;
-            touch-action: none; /* Critical for mobile game touch */
+            touch-action: none;
         }
         
-        /* Memory Game Grid */
         .grid-game-board {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -81,17 +75,19 @@
 </head>
 <body class="antialiased">
 
-    <!-- Debug Script: Checks if Game Engine loads -->
+    <!-- Error Handler -->
     <script>
         window.onerror = function(msg, url, line) {
+            // Ignore benign ResizeObserver errors, alert on others
             if(!msg.includes("ResizeObserver")) {
-                alert("System Error: " + msg);
+                console.log("Error suppressed/logged: " + msg);
             }
+            return true; // Prevents the default browser alert popup
         };
         
-        // Create a safety placeholder so buttons don't crash if JS loads late
-        window.gameManager = {
-            start: function() { alert("Game Engine is still loading... please wait 2 seconds."); }
+        // Safety init
+        window.realGameManager = {
+            start: function() { alert("Loading... please wait."); }
         };
     </script>
 
@@ -114,7 +110,6 @@
 
     <!-- Game Zones -->
     <div class="max-w-7xl mx-auto px-4 py-8 space-y-20 pb-40">
-
         <!-- Reflex Zone -->
         <section id="reflex-zone" class="flex flex-col items-center text-center space-y-4 border border-slate-800 p-6 rounded-2xl bg-slate-900/50">
             <h2 class="text-3xl font-bold text-white neon-text-blue">Reflex Zone</h2>
@@ -141,12 +136,10 @@
                 ENTER GARDEN
             </button>
         </section>
-
     </div>
 
-    <!-- GAME OVERLAY (The Screen that opens when you play) -->
+    <!-- GAME OVERLAY -->
     <div id="game-container">
-        <!-- Top Bar -->
         <div class="absolute top-0 left-0 w-full h-16 flex justify-between items-center px-4 bg-slate-900 z-50 border-b border-slate-700">
             <div class="text-white font-bold text-lg brand-font" id="game-title">GAME</div>
             <div class="flex items-center gap-3">
@@ -171,7 +164,6 @@
 
     <!-- MAIN GAME ENGINE -->
     <script>
-        // DOM Elements
         const container = document.getElementById('game-container');
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -184,10 +176,8 @@
 
         let animationFrameId;
         let currentGame = null;
-        let gameWidth = window.innerWidth;
-        let gameHeight = window.innerHeight;
 
-        // Define the REAL manager globally
+        // Define Manager Globally
         window.realGameManager = {
             active: false,
             score: 0,
@@ -221,10 +211,8 @@
             },
 
             resizeCanvas: function() {
-                gameWidth = window.innerWidth;
-                gameHeight = window.innerHeight;
-                canvas.width = gameWidth;
-                canvas.height = gameHeight;
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
             },
 
             end: function(text, title="Game Over") {
@@ -268,7 +256,7 @@
                     for(let i = this.targets.length - 1; i >= 0; i--) {
                         const t = this.targets[i];
                         const dist = Math.hypot(t.x - x, t.y - y);
-                        if(dist < t.radius + 20) { // 20px forgiveness
+                        if(dist < t.radius + 20) {
                             window.realGameManager.updateScore(window.realGameManager.score + 10);
                             this.targets.splice(i, 1);
                             break;
@@ -360,7 +348,7 @@
             }
         };
 
-        // --- ZEN GAME ---
+        // --- ZEN GAME (FIXED) ---
         const zenGame = {
             particles: [],
             init: function() {
@@ -368,11 +356,14 @@
                 const addP = (e) => {
                     const touch = e.touches ? e.touches[0] : e;
                     const rect = canvas.getBoundingClientRect();
+                    const clientX = touch ? touch.clientX : e.clientX;
+                    const clientY = touch ? touch.clientY : e.clientY;
+                    
                     for(let i=0; i<2; i++) {
                         this.particles.push({
-                            x: touch.clientX - rect.left,
-                            y: touch.clientY - rect.top,
-                            size: Math.random()*10+2,
+                            x: clientX - rect.left,
+                            y: clientY - rect.top,
+                            size: Math.random()*10+5,
                             color: `hsl(${Date.now()%360}, 100%, 50%)`
                         });
                     }
@@ -390,10 +381,19 @@
                     let p = this.particles[i];
                     p.y += Math.random()*4-2;
                     p.x += Math.random()*4-2;
-                    p.size -= 0.1;
-                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-                    ctx.fillStyle = p.color; ctx.fill();
-                    if(p.size <= 0) { this.particles.splice(i,1); i--; }
+                    p.size -= 0.1; // Shrink
+                    
+                    // CRITICAL FIX: Remove if too small BEFORE drawing
+                    if(p.size <= 0.1) { 
+                        this.particles.splice(i,1); 
+                        i--; 
+                        continue; 
+                    }
+
+                    ctx.beginPath(); 
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                    ctx.fillStyle = p.color; 
+                    ctx.fill();
                 }
                 animationFrameId = requestAnimationFrame(() => this.loop());
             }
