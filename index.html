@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zoner Games - Arcade Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent; /* Fixes blue flash on mobile tap */
+        }
+
+        h1, h2, h3, .brand-font { font-family: 'Orbitron', sans-serif; }
+
+        /* Animations */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+        
+        .card-hover:hover { transform: translateY(-5px) scale(1.02); }
+
+        /* Neon Text */
+        .neon-text-blue { text-shadow: 0 0 10px #3b82f6; }
+        .neon-text-purple { text-shadow: 0 0 10px #a855f7; }
+        .neon-text-green { text-shadow: 0 0 10px #22c55e; }
+
+        /* Game Overlay */
+        #game-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 1);
+            z-index: 9999; /* Very high z-index to ensure visibility */
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            border-radius: 8px;
+            touch-action: none; /* Critical for mobile game touch */
+        }
+        
+        /* Memory Game Grid */
+        .grid-game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            width: 90vw;
+            max-width: 400px;
+        }
+        
+        .memory-card {
+            aspect-ratio: 1;
+            background: #1e293b;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            border: 2px solid #334155;
+        }
+        .memory-card.flipped { background: #3b82f6; transform: rotateY(180deg); }
+        .memory-card.matched { background: #22c55e; border-color: #4ade80; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Debug Script: Checks if Game Engine loads -->
+    <script>
+        window.onerror = function(msg, url, line) {
+            if(!msg.includes("ResizeObserver")) {
+                alert("System Error: " + msg);
+            }
+        };
+        
+        // Create a safety placeholder so buttons don't crash if JS loads late
+        window.gameManager = {
+            start: function() { alert("Game Engine is still loading... please wait 2 seconds."); }
+        };
+    </script>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex items-center justify-between h-16">
+                <span class="text-2xl font-bold brand-font text-white">ZONER</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="relative pt-32 pb-12 text-center">
+        <h1 class="text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 mb-6 animate-float">
+            ENTER THE ZONE
+        </h1>
+        <p class="text-slate-400 mb-8">Arcade Portal Online</p>
+    </div>
+
+    <!-- Game Zones -->
+    <div class="max-w-7xl mx-auto px-4 py-8 space-y-20 pb-40">
+
+        <!-- Reflex Zone -->
+        <section id="reflex-zone" class="flex flex-col items-center text-center space-y-4 border border-slate-800 p-6 rounded-2xl bg-slate-900/50">
+            <h2 class="text-3xl font-bold text-white neon-text-blue">Reflex Zone</h2>
+            <p class="text-slate-400">Tap targets before they vanish.</p>
+            <button onclick="window.realGameManager.start('reflex')" class="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full text-lg transition shadow-[0_0_20px_rgba(37,99,235,0.5)] w-full max-w-xs">
+                PLAY NEON AIM
+            </button>
+        </section>
+
+        <!-- Mind Zone -->
+        <section id="mind-zone" class="flex flex-col items-center text-center space-y-4 border border-slate-800 p-6 rounded-2xl bg-slate-900/50">
+            <h2 class="text-3xl font-bold text-white neon-text-purple">Mind Zone</h2>
+            <p class="text-slate-400">Find the matching cosmic pairs.</p>
+            <button onclick="window.realGameManager.start('mind')" class="px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-full text-lg transition shadow-[0_0_20px_rgba(147,51,234,0.5)] w-full max-w-xs">
+                PLAY MEMORY
+            </button>
+        </section>
+
+        <!-- Zen Zone -->
+        <section id="zen-zone" class="flex flex-col items-center text-center space-y-4 border border-slate-800 p-6 rounded-2xl bg-slate-900/50">
+            <h2 class="text-3xl font-bold text-white neon-text-green">Zen Zone</h2>
+            <p class="text-slate-400">Create light with your touch.</p>
+            <button onclick="window.realGameManager.start('zen')" class="px-8 py-4 bg-green-600 hover:bg-green-500 text-white font-bold rounded-full text-lg transition shadow-[0_0_20px_rgba(22,163,74,0.5)] w-full max-w-xs">
+                ENTER GARDEN
+            </button>
+        </section>
+
+    </div>
+
+    <!-- GAME OVERLAY (The Screen that opens when you play) -->
+    <div id="game-container">
+        <!-- Top Bar -->
+        <div class="absolute top-0 left-0 w-full h-16 flex justify-between items-center px-4 bg-slate-900 z-50 border-b border-slate-700">
+            <div class="text-white font-bold text-lg brand-font" id="game-title">GAME</div>
+            <div class="flex items-center gap-3">
+                <div id="game-score" class="text-blue-400 font-mono">0</div>
+                <button onclick="window.realGameManager.close()" class="bg-red-600 text-white px-3 py-1 rounded font-bold text-sm">EXIT</button>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" class="hidden"></canvas>
+        <div id="htmlGameArea" class="hidden"></div>
+
+        <!-- Game Over Menu -->
+        <div id="game-menu" class="absolute inset-0 flex items-center justify-center bg-black/90 z-50 hidden">
+            <div class="bg-slate-800 border border-slate-600 p-6 rounded-xl text-center w-80">
+                <h3 id="menu-title" class="text-2xl text-white font-bold mb-2">Game Over</h3>
+                <p id="menu-score" class="text-blue-400 text-xl font-mono mb-6">Score: 0</p>
+                <button onclick="window.realGameManager.restart()" class="w-full py-3 bg-blue-600 text-white rounded font-bold mb-3">Play Again</button>
+                <button onclick="window.realGameManager.close()" class="w-full py-3 bg-slate-700 text-white rounded">Exit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN GAME ENGINE -->
+    <script>
+        // DOM Elements
+        const container = document.getElementById('game-container');
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const htmlArea = document.getElementById('htmlGameArea');
+        const gameTitle = document.getElementById('game-title');
+        const gameScoreDisplay = document.getElementById('game-score');
+        const menu = document.getElementById('game-menu');
+        const menuTitle = document.getElementById('menu-title');
+        const menuScore = document.getElementById('menu-score');
+
+        let animationFrameId;
+        let currentGame = null;
+        let gameWidth = window.innerWidth;
+        let gameHeight = window.innerHeight;
+
+        // Define the REAL manager globally
+        window.realGameManager = {
+            active: false,
+            score: 0,
+
+            start: function(type) {
+                this.active = true;
+                this.score = 0;
+                currentGame = type;
+                container.style.display = 'flex';
+                menu.classList.add('hidden');
+                htmlArea.innerHTML = '';
+
+                if(type === 'reflex') {
+                    canvas.classList.remove('hidden');
+                    htmlArea.classList.add('hidden');
+                    gameTitle.innerText = "NEON AIM";
+                    this.resizeCanvas();
+                    reflexGame.init();
+                } else if (type === 'mind') {
+                    canvas.classList.add('hidden');
+                    htmlArea.classList.remove('hidden');
+                    gameTitle.innerText = "COSMIC MEMORY";
+                    mindGame.init();
+                } else if (type === 'zen') {
+                    canvas.classList.remove('hidden');
+                    htmlArea.classList.add('hidden');
+                    gameTitle.innerText = "FLOW GARDEN";
+                    this.resizeCanvas();
+                    zenGame.init();
+                }
+            },
+
+            resizeCanvas: function() {
+                gameWidth = window.innerWidth;
+                gameHeight = window.innerHeight;
+                canvas.width = gameWidth;
+                canvas.height = gameHeight;
+            },
+
+            end: function(text, title="Game Over") {
+                this.active = false;
+                menu.classList.remove('hidden');
+                menuTitle.innerText = title;
+                menuScore.innerText = text;
+            },
+
+            restart: function() { this.start(currentGame); },
+            
+            close: function() {
+                container.style.display = 'none';
+                this.active = false;
+                cancelAnimationFrame(animationFrameId);
+            },
+
+            updateScore: function(val) {
+                this.score = val;
+                gameScoreDisplay.innerText = "Score: " + val;
+            }
+        };
+
+        // --- REFLEX GAME ---
+        const reflexGame = {
+            targets: [],
+            timer: 0,
+            init: function() {
+                this.targets = [];
+                this.timer = 1800; // 30 secs
+                
+                const input = (e) => {
+                    if(!window.realGameManager.active) return;
+                    e.preventDefault();
+                    
+                    const rect = canvas.getBoundingClientRect();
+                    const touch = e.changedTouches ? e.changedTouches[0] : e;
+                    const x = touch.clientX - rect.left;
+                    const y = touch.clientY - rect.top;
+
+                    for(let i = this.targets.length - 1; i >= 0; i--) {
+                        const t = this.targets[i];
+                        const dist = Math.hypot(t.x - x, t.y - y);
+                        if(dist < t.radius + 20) { // 20px forgiveness
+                            window.realGameManager.updateScore(window.realGameManager.score + 10);
+                            this.targets.splice(i, 1);
+                            break;
+                        }
+                    }
+                };
+                
+                canvas.onmousedown = input;
+                canvas.ontouchstart = input;
+                this.loop();
+            },
+            loop: function() {
+                if(!window.realGameManager.active || currentGame !== 'reflex') return;
+                ctx.clearRect(0,0, canvas.width, canvas.height);
+                
+                this.timer--;
+                if(this.timer % 30 === 0) {
+                    this.targets.push({
+                        x: Math.random() * (canvas.width - 100) + 50,
+                        y: Math.random() * (canvas.height - 100) + 50,
+                        radius: 40,
+                        color: `hsl(${Math.random()*360}, 70%, 60%)`
+                    });
+                }
+
+                for(let i=this.targets.length-1; i>=0; i--) {
+                    const t = this.targets[i];
+                    t.radius -= 0.2;
+                    if(t.radius <= 0) { this.targets.splice(i,1); continue; }
+                    
+                    ctx.beginPath();
+                    ctx.arc(t.x, t.y, t.radius, 0, Math.PI*2);
+                    ctx.fillStyle = t.color;
+                    ctx.fill();
+                    ctx.lineWidth=3; ctx.strokeStyle='white'; ctx.stroke();
+                }
+                
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillRect(0, canvas.height-5, (this.timer/1800)*canvas.width, 5);
+
+                if(this.timer <= 0) window.realGameManager.end("Final Score: " + window.realGameManager.score);
+                else animationFrameId = requestAnimationFrame(() => this.loop());
+            }
+        };
+
+        // --- MIND GAME ---
+        const mindGame = {
+            init: function() {
+                const items = ['🚀','👽','🪐','⭐','🌙','☄️','☀️','🛸'];
+                let deck = [...items, ...items].sort(() => Math.random() - 0.5);
+                htmlArea.innerHTML = '<div class="grid-game-board"></div>';
+                const board = htmlArea.querySelector('.grid-game-board');
+                let flipped = [];
+                let matched = 0;
+                let moves = 0;
+
+                deck.forEach(emoji => {
+                    const card = document.createElement('div');
+                    card.className = 'memory-card';
+                    card.onclick = () => {
+                        if(flipped.length < 2 && !card.classList.contains('flipped')) {
+                            card.classList.add('flipped');
+                            card.innerText = emoji;
+                            flipped.push({card, emoji});
+                            
+                            if(flipped.length === 2) {
+                                moves++;
+                                window.realGameManager.updateScore(moves);
+                                if(flipped[0].emoji === flipped[1].emoji) {
+                                    flipped[0].card.classList.add('matched');
+                                    flipped[1].card.classList.add('matched');
+                                    matched++;
+                                    flipped = [];
+                                    if(matched === 8) window.realGameManager.end("Moves: " + moves, "YOU WON!");
+                                } else {
+                                    setTimeout(() => {
+                                        flipped[0].card.classList.remove('flipped');
+                                        flipped[1].card.classList.remove('flipped');
+                                        flipped[0].card.innerText = '';
+                                        flipped[1].card.innerText = '';
+                                        flipped = [];
+                                    }, 800);
+                                }
+                            }
+                        }
+                    };
+                    board.appendChild(card);
+                });
+            }
+        };
+
+        // --- ZEN GAME ---
+        const zenGame = {
+            particles: [],
+            init: function() {
+                this.particles = [];
+                const addP = (e) => {
+                    const touch = e.touches ? e.touches[0] : e;
+                    const rect = canvas.getBoundingClientRect();
+                    for(let i=0; i<2; i++) {
+                        this.particles.push({
+                            x: touch.clientX - rect.left,
+                            y: touch.clientY - rect.top,
+                            size: Math.random()*10+2,
+                            color: `hsl(${Date.now()%360}, 100%, 50%)`
+                        });
+                    }
+                };
+                canvas.onmousemove = addP;
+                canvas.ontouchmove = addP;
+                this.loop();
+            },
+            loop: function() {
+                if(!window.realGameManager.active || currentGame !== 'zen') return;
+                ctx.fillStyle = 'rgba(15,23,42,0.1)';
+                ctx.fillRect(0,0,canvas.width,canvas.height);
+                
+                for(let i=0; i<this.particles.length; i++) {
+                    let p = this.particles[i];
+                    p.y += Math.random()*4-2;
+                    p.x += Math.random()*4-2;
+                    p.size -= 0.1;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                    ctx.fillStyle = p.color; ctx.fill();
+                    if(p.size <= 0) { this.particles.splice(i,1); i--; }
+                }
+                animationFrameId = requestAnimationFrame(() => this.loop());
+            }
+        };
+    </script>
+</body>
+</html>
+
+
